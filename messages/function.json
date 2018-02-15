@@ -1,23 +1,16 @@
 {
- "disabled": false,
- "bindings": [
-  {
-   "authLevel": "function",
-   "type": "httpTrigger",
-   "direction": "in",
-   "name": "req",
-   "methods": [
-    "post"
-   ]
-  },
-  {
-   "type": "http",
-   "direction": "out",
-   "name": "res"
-  }
- ],
- "_originalEntryPoint": false,
- "_originalScriptFile": "index.js",
- "scriptFile": "../.funcpack/index.js",
- "entryPoint": "messages"
+  "disabled": false,
+  "bindings": [
+    {
+      "authLevel": "function",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req"
+    },
+    {
+      "type": "http",
+      "direction": "out",
+      "name": "res"
+    }
+  ]
 }
