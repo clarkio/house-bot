@@ -2,6 +2,8 @@ var builder = require('botbuilder');
 require('dotenv').config();
 var botbuilder_azure = require('botbuilder-azure');
 
+console.log(process.env['MicrosoftAppId']);
+
 var connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
   appPassword: process.env['MicrosoftAppPassword'],
@@ -30,12 +32,14 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     session.send('OK. Canceled.');
     session.endDialog();
   })
-  .matches('Control Lights', (session, args) => {
+  .matches('Lights', (session, args) => {
     session.send('OK! One sec...');
+    console.log(args);
+    var location = builder.EntityRecognizer.findEntity(args.entities, 'light');
 
-    var location = builder.EntityRecognizer.findEntity(args.entities, 'Location');
-
-    var lightState = builder.EntityRecognizer.findEntity(args.entities, 'Light State');
+    var lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
+    console.log('The location is: ', location);
+    console.log('The state of the light is: ', lightState);
 
     // got both location and light state, move on to the next step
     if (location && lightState) {
