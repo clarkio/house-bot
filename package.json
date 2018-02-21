@@ -6,7 +6,8 @@
   "dependencies": {
     "botbuilder": "^3.13.1",
     "botbuilder-azure": "^3.0.4",
-    "dotenv": "~5.0.0"
+    "dotenv": "~5.0.0",
+    "lifx-http-api": "^1.0.3"
   },
   "devDependencies": {
     "restify": "^5.0.0"

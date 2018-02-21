@@ -1,8 +1,12 @@
 var builder = require('botbuilder');
 require('dotenv').config();
 var botbuilder_azure = require('botbuilder-azure');
+var lifx = require('lifx-http-api'),
+  client;
 
-console.log(process.env['MicrosoftAppId']);
+client = new lifx({
+  bearerToken: process.env['LifxApiKey']
+});
 
 var connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
@@ -10,7 +14,9 @@ var connector = new botbuilder_azure.BotServiceConnector({
   openIdMetadata: process.env['BotOpenIdMetadata']
 });
 
-var bot = new builder.UniversalBot(connector);
+var bot = new builder.UniversalBot(connector, {
+  storage: new builder.MemoryBotStorage()
+});
 
 let luisModelUrl = `https://${process.env['LuisAPIHostName']}/luis/v2.0/apps/${
   process.env['LuisAppId']
@@ -34,17 +40,27 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
   })
   .matches('Lights', (session, args) => {
     session.send('OK! One sec...');
-    console.log(args);
-    var location = builder.EntityRecognizer.findEntity(args.entities, 'light');
 
-    var lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
-    console.log('The location is: ', location);
-    console.log('The state of the light is: ', lightState);
+    let lightState;
+    let location = builder.EntityRecognizer.findEntity(args.entities, 'light');
+    let color = builder.EntityRecognizer.findEntity(args.entities, 'color');
+
+    if (!color) {
+      lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
+    } else {
+      lightState = {
+        entity: 'on',
+        type: 'state',
+        startIndex: 0,
+        endIndex: 1,
+        score: 100
+      };
+    }
 
     // got both location and light state, move on to the next step
     if (location && lightState) {
       // we call LIFX
-      controlLights(session, location.entity, lightState.entity);
+      controlLights(session, location.entity, lightState.entity, color && color.entity);
     }
 
     // got a location, but no light state
@@ -60,9 +76,24 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
 
 bot.dialog('/', intents);
 
-function controlLights(session, location, lightState) {
-  session.send(`${location} lights are ${lightState}`);
-  session.endDialog();
+function controlLights(session, location, lightState, color) {
+  let message = `The ${location} was turned ${lightState}`;
+  let stateToSet = {
+    power: `${lightState}`,
+    brightness: 1.0,
+    duration: 1
+  };
+  if (color) {
+    stateToSet.color = `${color} saturation:1.0`;
+    message += ` and was set to ${color}`;
+  }
+  client
+    .setState('label:Bottom Lamp', stateToSet)
+    .then(result => {
+      session.send(message);
+      session.endDialog();
+    })
+    .catch(console.error);
 }
 
 module.exports = connector.listen();
