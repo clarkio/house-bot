@@ -8,10 +8,13 @@ client = new lifx({
   bearerToken: process.env['LifxApiKey']
 });
 
+if (process.env['LifxApiKey']) {
+  console.log('WE HAVE AND CAN READ KEYS!!!!');
+}
+
 var connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
-  appPassword: process.env['MicrosoftAppPassword'],
-  openIdMetadata: process.env['BotOpenIdMetadata']
+  appPassword: process.env['MicrosoftAppPassword']
 });
 
 var bot = new builder.UniversalBot(connector, {
