@@ -8,12 +8,6 @@ client = new lifx({
   bearerToken: process.env['LifxApiKey']
 });
 
-if (process.env['LifxApiKey']) {
-  console.log('WE HAVE AND CAN READ KEYS!!!!');
-} else {
-  console.log('NO LIFX KEY FOUND :(');
-}
-
 var connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
   appPassword: process.env['MicrosoftAppPassword']
@@ -93,7 +87,7 @@ function controlLights(session, location, lightState, color) {
     message += ` and was set to ${color}`;
   }
   client
-    .setState('label:Bottom Lamp', stateToSet)
+    .setState('label:Bottom Bulb', stateToSet)
     .then(result => {
       session.send(message);
       session.endDialog();
