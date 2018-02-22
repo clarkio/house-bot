@@ -10,6 +10,8 @@ client = new lifx({
 
 if (process.env['LifxApiKey']) {
   console.log('WE HAVE AND CAN READ KEYS!!!!');
+} else {
+  console.log('NO LIFX KEY FOUND :(');
 }
 
 var connector = new botbuilder_azure.BotServiceConnector({
