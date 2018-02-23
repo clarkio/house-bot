@@ -59,7 +59,8 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     // got both location and light state, move on to the next step
     if (location && lightState) {
       // we call LIFX
-      controlLights(session, location.entity, lightState.entity, color && color.entity);
+      // color.entity.replace is for handling hex color codes since LUIS separate #, numbers
+      controlLights(session, location.entity, lightState.entity, color && color.entity.replace(' ', ''));
     }
 
     // got a location, but no light state
@@ -77,6 +78,7 @@ bot.dialog('/', intents);
 
 function controlLights(session, location, lightState, color) {
   let message = `The ${location} was turned ${lightState}`;
+  console.log(color);
   let stateToSet = {
     power: `${lightState}`,
     brightness: 1.0,
