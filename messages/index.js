@@ -100,10 +100,24 @@ function triggerLightEffect(session, effect) {
       })
       .catch(error => console.error(error));
   } else if (effect === 'cop mode') {
-    console.log('Made it to cop mode!');
     pulseOptions = {
       color: 'blue',
       from_color: 'red',
+      period: 0.5,
+      cycles: 10,
+      power_on: true
+    };
+    client
+      .pulse('label:Bottom Bulb', pulseOptions)
+      .then(result => {
+        session.send(message);
+        session.endDialog();
+      })
+      .catch(error => console.error(error));
+  } else if (effect === 'new follower') {
+    pulseOptions = {
+      color: 'purple',
+      from_color: 'white',
       period: 0.5,
       cycles: 10,
       power_on: true
