@@ -43,6 +43,9 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     let lightState;
     let location = builder.EntityRecognizer.findEntity(args.entities, 'light');
     let color = builder.EntityRecognizer.findEntity(args.entities, 'color');
+    let effect = builder.EntityRecognizer.findEntity(args.entities, 'effect');
+    // !bulb trigger club mode
+    // !bulb trigger breathe effect red blue 1 10
 
     if (!color) {
       lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
@@ -61,13 +64,10 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
       // we call LIFX
       // color.entity.replace is for handling hex color codes since LUIS separate #, numbers
       controlLights(session, location.entity, lightState.entity, color && color.entity.replace(' ', ''));
-    }
-
-    // got a location, but no light state
-    if (!location || !lightState) {
-      session.send(
-        `I need to know which light and if you want it on or off. You can say things like, "Turn on/off the light".`
-      );
+    } else if (effect) {
+      triggerLightEffect(session, effect.entity);
+    } else {
+      session.send(`I did not understand that light command. Please double check the available commands and retry.`);
     }
   })
   .onDefault(session => {
@@ -75,6 +75,50 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
   });
 
 bot.dialog('/', intents);
+
+function triggerLightEffect(session, effect) {
+  console.log(`Effect received: ${effect}`);
+  let pulseOptions = {};
+  let cycleOptions = {};
+
+  if (effect === 'club mode') {
+    cycleOptions = {
+      states: [
+        { brightness: 1.0, duration: 0.5, color: 'red saturation:1.0' },
+        { brightness: 1.0, duration: 0.5, color: 'blue saturation:1.0' },
+        { brightness: 1.0, duration: 0.5, color: 'purple saturation:1.0' },
+        { brightness: 1.0, duration: 0.5, color: 'green saturation:1.0' },
+        { brightness: 1.0, duration: 0.5, color: 'orange saturation:1.0' }
+      ],
+      defaults: { power: 'on', duration: 0.5 }
+    };
+    client
+      .cycle('label:Bottom Bulb', cycleOptions)
+      .then(result => {
+        session.send(message);
+        session.endDialog();
+      })
+      .catch(error => console.error(error));
+  } else if (effect === 'cop mode') {
+    console.log('Made it to cop mode!');
+    pulseOptions = {
+      color: 'blue',
+      from_color: 'red',
+      period: 0.5,
+      cycles: 10,
+      power_on: true
+    };
+    client
+      .pulse('label:Bottom Bulb', pulseOptions)
+      .then(result => {
+        session.send(message);
+        session.endDialog();
+      })
+      .catch(error => console.error(error));
+  } else {
+    // do nothing
+  }
+}
 
 function controlLights(session, location, lightState, color) {
   let message = `The ${location} was turned ${lightState}`;
