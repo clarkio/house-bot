@@ -7,6 +7,7 @@ var lifx = require('lifx-http-api'),
 client = new lifx({
   bearerToken: process.env['LifxApiKey']
 });
+const lifxDeviceToUse = 'label:Bottom Bulb';
 
 var connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
@@ -44,8 +45,6 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     let location = builder.EntityRecognizer.findEntity(args.entities, 'light');
     let color = builder.EntityRecognizer.findEntity(args.entities, 'color');
     let effect = builder.EntityRecognizer.findEntity(args.entities, 'effect');
-    // !bulb trigger club mode
-    // !bulb trigger breathe effect red blue 1 10
 
     if (!color) {
       lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
@@ -59,78 +58,78 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
       };
     }
 
-    // got both location and light state, move on to the next step
     if (location && lightState) {
       // we call LIFX
-      // color.entity.replace is for handling hex color codes since LUIS separate #, numbers
+      // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
       controlLights(session, location.entity, lightState.entity, color && color.entity.replace(' ', ''));
     } else if (effect) {
       triggerLightEffect(session, effect.entity);
     } else {
       session.send(`I did not understand that light command. Please double check the available commands and retry.`);
+      session.endDialog();
     }
   })
   .onDefault(session => {
     session.send("Sorry, I did not understand '%s'.", session.message.text);
+    session.endDialog();
   });
 
 bot.dialog('/', intents);
 
 function triggerLightEffect(session, effect) {
-  console.log(`Effect received: ${effect}`);
-  let pulseOptions = {};
-  let cycleOptions = {};
+  let pulseOptions;
+  console.log(`Raw effect received: ${effect}`);
+  let message = `Successfully initated "${effect}" effect`;
 
-  if (effect === 'club mode') {
-    cycleOptions = {
-      states: [
-        { brightness: 1.0, duration: 0.5, color: 'red saturation:1.0' },
-        { brightness: 1.0, duration: 0.5, color: 'blue saturation:1.0' },
-        { brightness: 1.0, duration: 0.5, color: 'purple saturation:1.0' },
-        { brightness: 1.0, duration: 0.5, color: 'green saturation:1.0' },
-        { brightness: 1.0, duration: 0.5, color: 'orange saturation:1.0' }
-      ],
-      defaults: { power: 'on', duration: 0.5 }
-    };
-    client
-      .cycle('label:Bottom Bulb', cycleOptions)
-      .then(result => {
-        session.send(message);
-        session.endDialog();
-      })
-      .catch(error => console.error(error));
-  } else if (effect === 'cop mode') {
+  if (effect === 'cop mode') {
     pulseOptions = {
       color: 'blue',
       from_color: 'red',
-      period: 0.5,
-      cycles: 10,
+      period: process.env.LifxEffectPeriod,
+      cycles: process.env.LifxEffectCycles,
       power_on: true
     };
-    client
-      .pulse('label:Bottom Bulb', pulseOptions)
-      .then(result => {
-        session.send(message);
-        session.endDialog();
-      })
-      .catch(error => console.error(error));
   } else if (effect === 'new follower') {
     pulseOptions = {
       color: 'purple',
       from_color: 'white',
-      period: 0.5,
-      cycles: 10,
+      period: process.env.LifxEffectPeriod,
+      cycles: process.env.LifxEffectCycles,
       power_on: true
     };
+  } else if (effect === 'new subscriber') {
+    pulseOptions = {
+      color: 'green',
+      from_color: 'purple',
+      period: process.env.LifxEffectPeriod,
+      cycles: process.env.LifxEffectCycles,
+      power_on: true
+    };
+  } else {
+    // Not a defined effect so do nothing
+    let warningMessage = `Received an unsupported effect: ${effect}`;
+    console.warn(warningMessage);
+    console.warn(`Full message received: ${message}`);
+
+    session.send(warningMessage);
+    session.endDialog();
+  }
+
+  if (pulseOptions) {
+    console.log('Initiating the effect');
     client
-      .pulse('label:Bottom Bulb', pulseOptions)
+      .pulse(lifxDeviceToUse, pulseOptions)
       .then(result => {
         session.send(message);
         session.endDialog();
       })
-      .catch(error => console.error(error));
+      .catch(error => {
+        console.error(error);
+        session.send(`There was an error initiating the effect: ${error}`);
+        session.endDialog();
+      });
   } else {
-    // do nothing
+    console.log('Options was undefined and therefore no effect was initiated');
   }
 }
 
@@ -152,7 +151,11 @@ function controlLights(session, location, lightState, color) {
       session.send(message);
       session.endDialog();
     })
-    .catch(console.error);
+    .catch(error => {
+      console.error(error);
+      session.send(`There was an error initiating the effect: ${error}`);
+      session.endDialog();
+    });
 }
 
 module.exports = connector.listen();
