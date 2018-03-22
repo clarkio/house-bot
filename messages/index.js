@@ -56,6 +56,11 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
         endIndex: 1,
         score: 100
       };
+      if (!location) {
+        location = {
+          entity: 'light'
+        };
+      }
     }
 
     if (location && lightState) {
