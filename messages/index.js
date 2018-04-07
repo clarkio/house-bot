@@ -151,7 +151,7 @@ function controlLights(session, location, lightState, color) {
     duration: 1
   };
   if (color) {
-    stateToSet.color = `${color} saturation:1.0`;
+    stateToSet.color = `${color}`;
     message += ` and was set to ${color}`;
     setHueLights(color);
   }
