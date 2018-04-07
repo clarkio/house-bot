@@ -1,20 +1,22 @@
-var builder = require('botbuilder');
+const builder = require('botbuilder');
 require('dotenv').config();
-var botbuilder_azure = require('botbuilder-azure');
-var lifx = require('lifx-http-api'),
-  client;
+const botbuilder_azure = require('botbuilder-azure');
+const axios = require('axios');
+const lifx = require('lifx-http-api');
 
-client = new lifx({
+const client = new lifx({
   bearerToken: process.env['LifxApiKey']
 });
 const lifxDeviceToUse = 'label:Bottom Bulb';
+const iftttKey = process.env.iftttKey;
+const hueEnabled = process.env.hueEnabled;
 
-var connector = new botbuilder_azure.BotServiceConnector({
+const connector = new botbuilder_azure.BotServiceConnector({
   appId: process.env['MicrosoftAppId'],
   appPassword: process.env['MicrosoftAppPassword']
 });
 
-var bot = new builder.UniversalBot(connector, {
+const bot = new builder.UniversalBot(connector, {
   storage: new builder.MemoryBotStorage()
 });
 
@@ -133,6 +135,8 @@ function triggerLightEffect(session, effect) {
         session.send(`There was an error initiating the effect: ${error}`);
         session.endDialog();
       });
+
+    setEffectOnHueLights(pulseOptions);
   } else {
     console.log('Options was undefined and therefore no effect was initiated');
   }
@@ -149,7 +153,12 @@ function controlLights(session, location, lightState, color) {
   if (color) {
     stateToSet.color = `${color} saturation:1.0`;
     message += ` and was set to ${color}`;
+    setHueLights(color);
   }
+  setLifxLights(stateToSet, message, session);
+}
+
+function setLifxLights(stateToSet, message, session) {
   client
     .setState('label:Bottom Bulb', stateToSet)
     .then(result => {
@@ -161,6 +170,51 @@ function controlLights(session, location, lightState, color) {
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
     });
+}
+
+function setHueLights(color) {
+  if (!hueEnabled) return;
+  const colorUrl = `https://maker.ifttt.com/trigger/office-color/with/key/${iftttKey}`;
+  const dimUrl = `https://maker.ifttt.com/trigger/office-dim/with/key/${iftttKey}`;
+  const dimPayload = { value1: 100 };
+  const colorPayload = { value1: color };
+  sendHueCommand(colorUrl, colorPayload, dimUrl, dimPayload);
+}
+
+function sendHueCommand(colorUrl, colorPayload, dimUrl, dimPayload) {
+  axios
+    .post(colorUrl, colorPayload)
+    .then(colorResult => {
+      axios
+        .post(dimUrl, dimPayload)
+        .then(dimResult => {
+          console.log('Finished setting Hue lights via IFTTT');
+        })
+        .catch(error => {
+          console.error(`Failed to set DIM level on Hue lights: ${error}`);
+        });
+    })
+    .catch(error => {
+      console.error(`Failed to set COLOR on Hue lights: ${error}`);
+    });
+}
+
+function setEffectOnHueLights(pulseOptions) {
+  if (!hueEnabled) return;
+  for (var i = 0; i < pulseOptions.cycles; i++) {
+    let color = (i + 1) % 2 === 0 ? pulseOptions.from_color : pulseOptions.color;
+    setHueLights(color);
+    sleep(pulseOptions.period * 1000);
+  }
+}
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if (new Date().getTime() - start > milliseconds) {
+      break;
+    }
+  }
 }
 
 module.exports = connector.listen();
