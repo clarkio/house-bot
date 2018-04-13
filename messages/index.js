@@ -84,18 +84,18 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
 bot.dialog('/', intents);
 
 function triggerLightEffect(session, effect) {
-  let pulseOptions;
+  let pulseOptions = undefined;
   console.log(`Raw effect received: ${effect}`);
   let message = `Successfully initated "${effect}" effect`;
-  let period = process.env.LifxEffectPeriod;
-  let cycles = process.env.LifxEffectCycles;
+  let period = parseFloat(process.env.LifxEffectPeriod);
+  let cycles = parseFloat(process.env.LifxEffectCycles);
 
   if (effect === 'cop mode') {
     pulseOptions = {
       color: 'blue',
       from_color: 'red',
       period: period,
-      cycles: 15.0,
+      cycles: cycles,
       power_on: true
     };
   } else if (effect === 'new follower') {
@@ -103,7 +103,7 @@ function triggerLightEffect(session, effect) {
       color: 'purple',
       from_color: 'white',
       period: period,
-      cycles: 15.0,
+      cycles: cycles,
       power_on: true
     };
   } else if (effect === 'new subscriber') {
@@ -111,7 +111,7 @@ function triggerLightEffect(session, effect) {
       color: 'green',
       from_color: 'purple',
       period: period,
-      cycles: 15.0,
+      cycles: cycles,
       power_on: true
     };
   } else {
