@@ -87,29 +87,31 @@ function triggerLightEffect(session, effect) {
   let pulseOptions;
   console.log(`Raw effect received: ${effect}`);
   let message = `Successfully initated "${effect}" effect`;
+  let period = process.env.LifxEffectPeriod;
+  let cycles = process.env.LifxEffectCycles;
 
   if (effect === 'cop mode') {
     pulseOptions = {
       color: 'blue',
       from_color: 'red',
-      period: process.env.LifxEffectPeriod,
-      cycles: process.env.LifxEffectCycles,
+      period: period,
+      cycles: 15.0,
       power_on: true
     };
   } else if (effect === 'new follower') {
     pulseOptions = {
       color: 'purple',
       from_color: 'white',
-      period: process.env.LifxEffectPeriod,
-      cycles: process.env.LifxEffectCycles,
+      period: period,
+      cycles: 15.0,
       power_on: true
     };
   } else if (effect === 'new subscriber') {
     pulseOptions = {
       color: 'green',
       from_color: 'purple',
-      period: process.env.LifxEffectPeriod,
-      cycles: process.env.LifxEffectCycles,
+      period: period,
+      cycles: 15.0,
       power_on: true
     };
   } else {
@@ -136,7 +138,7 @@ function triggerLightEffect(session, effect) {
         session.endDialog();
       });
 
-    setEffectOnHueLights(pulseOptions);
+    // setEffectOnHueLights(pulseOptions);
   } else {
     console.log('Options was undefined and therefore no effect was initiated');
   }
@@ -153,7 +155,7 @@ function controlLights(session, location, lightState, color) {
   if (color) {
     stateToSet.color = `${color}`;
     message += ` and was set to ${color}`;
-    setHueLights(color);
+    // setHueLights(color);
   }
   setLifxLights(stateToSet, message, session);
 }
