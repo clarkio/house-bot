@@ -11,7 +11,7 @@ const {
   MicrosoftAppId,
   MicrosoftAppPassword
 } = process.env;
-const captains = captains;
+const captains = console;
 
 const client = new Lifx({
   bearerToken: LifxApiKey
@@ -34,9 +34,6 @@ const recognizer = new builder.LuisRecognizer(luisModelUrl);
 const intents = new builder.IntentDialog({ recognizers: [recognizer] })
   .matches('Greeting', session => {
     session.send('Sup, yo!');
-  })
-  .matches('Thank You', session => {
-    session.send('No problem! Glad I could help.');
   })
   .matches('Help', session => {
     session.send(
