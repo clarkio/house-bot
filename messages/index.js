@@ -3,6 +3,8 @@ require('dotenv').config();
 const botBuilderAzure = require('botbuilder-azure');
 const Lifx = require('lifx-http-api');
 
+const constants = require('./constants');
+
 const {
   LifxApiKey,
   LuisAPIHostName,
@@ -16,7 +18,6 @@ const captains = console;
 const client = new Lifx({
   bearerToken: LifxApiKey
 });
-const lifxDeviceToUse = 'label:Bottom Bulb';
 
 const connector = new botBuilderAzure.BotServiceConnector({
   appId: MicrosoftAppId,
@@ -32,28 +33,38 @@ const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?sub
 // Main dialog with LUIS
 const recognizer = new builder.LuisRecognizer(luisModelUrl);
 const intents = new builder.IntentDialog({ recognizers: [recognizer] })
-  .matches('Greeting', session => {
-    session.send('Sup, yo!');
+  .matches(constants.INTENT_GREETING, session => {
+    session.send(constants.MESSAGE_GREETING);
   })
-  .matches('Help', session => {
-    session.send(
-      'I can control the lights in your house. You can say things like, "Turn the kitchen lights on".'
-    );
+  .matches(constants.INTENT_HELP, session => {
+    session.send(constants.MESSAGE_HELP);
   })
-  .matches('Cancel', session => {
-    session.send('OK. Canceled.');
+  .matches(constants.INTENT_CANCEL, session => {
+    session.send(contants.MESSAGE_CANCEL);
     session.endDialog();
   })
-  .matches('Lights', (session, args) => {
-    session.send('OK! One sec...');
+  .matches(constants.INTENT_LIGHTS, (session, args) => {
+    session.send(constants.MESSAGE_LIGHTS_ACKNOWLEDGE);
 
     let lightState;
-    let location = builder.EntityRecognizer.findEntity(args.entities, 'light');
-    const color = builder.EntityRecognizer.findEntity(args.entities, 'color');
-    const effect = builder.EntityRecognizer.findEntity(args.entities, 'effect');
+    let location = builder.EntityRecognizer.findEntity(
+      args.entities,
+      constants.ENTITY_LIGHT_NAME
+    );
+    const color = builder.EntityRecognizer.findEntity(
+      args.entities,
+      constants.ENTITY_COLOR_NAME
+    );
+    const effect = builder.EntityRecognizer.findEntity(
+      args.entities,
+      constants.ENTITY_EFFECT_NAME
+    );
 
     if (!color) {
-      lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
+      lightState = builder.EntityRecognizer.findEntity(
+        args.entities,
+        constants.ENTITY_STATE_NAME
+      );
     } else {
       lightState = {
         entity: 'on',
@@ -81,9 +92,7 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     } else if (effect) {
       triggerLightEffect(session, effect.entity);
     } else {
-      session.send(
-        `I did not understand that light command. Please double check the available commands and retry.`
-      );
+      session.send(constants.MESSAGE_COMMAND_NOT_UNDERSTOOD);
       session.endDialog();
     }
   })
@@ -102,29 +111,11 @@ function triggerLightEffect(session, effect) {
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
   if (effect === 'cop mode') {
-    pulseOptions = {
-      color: 'blue',
-      from_color: 'red',
-      period,
-      cycles,
-      power_on: true
-    };
+    pulseOptions = constants.PULSE_EFFECT_OPTIONS_COP_MODE;
   } else if (effect === 'new follower') {
-    pulseOptions = {
-      color: 'purple',
-      from_color: 'white',
-      period,
-      cycles,
-      power_on: true
-    };
+    pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_FOLLOWER;
   } else if (effect === 'new subscriber') {
-    pulseOptions = {
-      color: 'green',
-      from_color: 'purple',
-      period,
-      cycles,
-      power_on: true
-    };
+    pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_SUBSCRIBER;
   } else {
     // Not a defined effect so do nothing
     const warningMessage = `Received an unsupported effect: ${effect}`;
@@ -138,7 +129,7 @@ function triggerLightEffect(session, effect) {
   if (pulseOptions) {
     captains.log('Initiating the effect');
     client
-      .pulse(lifxDeviceToUse, pulseOptions)
+      .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
       .then(result => {
         session.send(result);
         session.endDialog();
@@ -170,7 +161,7 @@ function controlLights(session, location, lightState, color) {
 
 function setLifxLights(stateToSet, message, session) {
   client
-    .setState('label:Bottom Bulb', stateToSet)
+    .setState(constants.LIFX_DEVICE_TO_USE, stateToSet)
     .then(result => {
       session.send(result);
       session.endDialog();
