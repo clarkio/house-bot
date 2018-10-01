@@ -40,7 +40,7 @@ const intents = new builder.IntentDialog({ recognizers: [recognizer] })
     session.send(constants.MESSAGE_HELP);
   })
   .matches(constants.INTENT_CANCEL, session => {
-    session.send(contants.MESSAGE_CANCEL);
+    session.send(constants.MESSAGE_CANCEL);
     session.endDialog();
   })
   .matches(constants.INTENT_LIGHTS, (session, args) => {
@@ -125,8 +125,10 @@ function triggerLightEffect(session, effect) {
     session.send(warningMessage);
     session.endDialog();
   }
+  pulseOptions.period = period;
+  pulseOptions.cycles = cycles;
 
-  if (pulseOptions) {
+  if (pulseOptions.power_on) {
     captains.log('Initiating the effect');
     client
       .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)

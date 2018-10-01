@@ -18,22 +18,16 @@ module.exports = {
   PULSE_EFFECT_OPTIONS_COP_MODE: {
     color: 'blue',
     from_color: 'red',
-    period,
-    cycles,
     power_on: true
   },
   PULSE_EFFECT_OPTIONS_NEW_FOLLOWER: {
     color: 'purple',
     from_color: 'white',
-    period,
-    cycles,
     power_on: true
   },
   PULSE_EFFECT_OPTIONS_NEW_SUBSCRIBER: {
     color: 'green',
     from_color: 'purple',
-    period,
-    cycles,
     power_on: true
   }
 };
