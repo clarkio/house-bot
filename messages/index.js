@@ -4,6 +4,7 @@ const botBuilderAzure = require('botbuilder-azure');
 const Lifx = require('lifx-http-api');
 
 const constants = require('./constants');
+const logger = require('./log');
 
 const {
   LifxApiKey,
@@ -13,115 +14,121 @@ const {
   MicrosoftAppId,
   MicrosoftAppPassword
 } = process.env;
-const captains = console;
-
-const client = new Lifx({
-  bearerToken: LifxApiKey
-});
-
-const connector = new botBuilderAzure.BotServiceConnector({
+const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?subscription-key=${LuisAPIKey}`;
+const lifxOptions = { bearerToken: LifxApiKey };
+const botServiceOptions = {
   appId: MicrosoftAppId,
   appPassword: MicrosoftAppPassword
-});
-
-const bot = new builder.UniversalBot(connector, {
+};
+const universalBotOptions = {
   storage: new builder.MemoryBotStorage()
-});
+};
 
-const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?subscription-key=${LuisAPIKey}`;
+const client = new Lifx(lifxOptions);
+const connector = new botBuilderAzure.BotServiceConnector(botServiceOptions);
+const bot = new builder.UniversalBot(connector, universalBotOptions);
 
-// Main dialog with LUIS
+// Main dialogs with LUIS
 const recognizer = new builder.LuisRecognizer(luisModelUrl);
 const intents = new builder.IntentDialog({ recognizers: [recognizer] })
-  .matches(constants.INTENT_GREETING, session => {
-    session.send(constants.MESSAGE_GREETING);
-  })
-  .matches(constants.INTENT_HELP, session => {
-    session.send(constants.MESSAGE_HELP);
-  })
-  .matches(constants.INTENT_CANCEL, session => {
-    session.send(constants.MESSAGE_CANCEL);
-    session.endDialog();
-  })
-  .matches(constants.INTENT_LIGHTS, (session, args) => {
-    session.send(constants.MESSAGE_LIGHTS_ACKNOWLEDGE);
-
-    let lightState;
-    let location = builder.EntityRecognizer.findEntity(
-      args.entities,
-      constants.ENTITY_LIGHT_NAME
-    );
-    const color = builder.EntityRecognizer.findEntity(
-      args.entities,
-      constants.ENTITY_COLOR_NAME
-    );
-    const effect = builder.EntityRecognizer.findEntity(
-      args.entities,
-      constants.ENTITY_EFFECT_NAME
-    );
-
-    if (!color) {
-      lightState = builder.EntityRecognizer.findEntity(
-        args.entities,
-        constants.ENTITY_STATE_NAME
-      );
-    } else {
-      lightState = {
-        entity: 'on',
-        type: 'state',
-        startIndex: 0,
-        endIndex: 1,
-        score: 100
-      };
-      if (!location) {
-        location = {
-          entity: 'light'
-        };
-      }
-    }
-
-    if (location && lightState) {
-      // we call LIFX
-      // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
-      controlLights(
-        session,
-        location.entity,
-        lightState.entity,
-        color && color.entity.replace(' ', '')
-      );
-    } else if (effect) {
-      triggerLightEffect(session, effect.entity);
-    } else {
-      session.send(constants.MESSAGE_COMMAND_NOT_UNDERSTOOD);
-      session.endDialog();
-    }
-  })
-  .onDefault(session => {
-    session.send("Sorry, I did not understand '%s'.", session.message.text);
-    session.endDialog();
-  });
+  .matches(constants.INTENT_GREETING, handleGreetingIntent)
+  .matches(constants.INTENT_HELP, handleHelpIntent)
+  .matches(constants.INTENT_CANCEL, handleCancelIntent)
+  .matches(constants.INTENT_LIGHTS, handleLightsIntent)
+  .onDefault(handleDefaultIntent);
 
 bot.dialog('/', intents);
 
+function handleGreetingIntent(session) {
+  session.send(constants.MESSAGE_GREETING);
+}
+
+function handleHelpIntent(session) {
+  session.send(constants.MESSAGE_HELP);
+}
+
+function handleCancelIntent(session) {
+  session.send(constants.MESSAGE_CANCEL);
+  session.endDialog();
+}
+
+function handleDefaultIntent(session) {
+  session.send(`Sorry, I did not understand ${session.message.text}.`);
+  session.endDialog();
+}
+
+function handleLightsIntent(session, args) {
+  session.send(constants.MESSAGE_LIGHTS_ACKNOWLEDGE);
+
+  let lightState;
+  let location = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.ENTITY_LIGHT_NAME
+  );
+  const color = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.ENTITY_COLOR_NAME
+  );
+  const effect = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.ENTITY_EFFECT_NAME
+  );
+
+  if (!color) {
+    lightState = builder.EntityRecognizer.findEntity(
+      args.entities,
+      constants.ENTITY_STATE_NAME
+    );
+  } else {
+    lightState = {
+      entity: 'on',
+      type: 'state',
+      startIndex: 0,
+      endIndex: 1,
+      score: 100
+    };
+    if (!location) {
+      location = {
+        entity: 'light'
+      };
+    }
+  }
+
+  if (location && lightState) {
+    // we call LIFX
+    // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
+    controlLights(
+      session,
+      location.entity,
+      lightState.entity,
+      color && color.entity.replace(' ', '')
+    );
+  } else if (effect) {
+    triggerLightEffect(session, effect.entity);
+  } else {
+    session.send(constants.MESSAGE_LIGHT_COMMAND_NOT_UNDERSTOOD);
+    session.endDialog();
+  }
+}
+
 function triggerLightEffect(session, effect) {
   let pulseOptions;
-  captains.log(`Raw effect received: ${effect}`);
+  logger.log('info', `Raw effect received: ${effect}`);
   const message = `Successfully initiated "${effect}" effect`;
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
-  if (effect === 'cop mode') {
+  if (effect === constants.EFFECT_COP_MODE) {
     pulseOptions = constants.PULSE_EFFECT_OPTIONS_COP_MODE;
-  } else if (effect === 'new follower') {
+  } else if (effect === constants.EFFECT_NEW_FOLLOWER) {
     pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_FOLLOWER;
-  } else if (effect === 'new subscriber') {
+  } else if (effect === constants.EFFECT_NEW_SUBSCRIBER) {
     pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_SUBSCRIBER;
   } else {
     // Not a defined effect so do nothing
-    const warningMessage = `Received an unsupported effect: ${effect}`;
-    captains.warn(warningMessage);
-    captains.warn(`Full message received: ${message}`);
-
+    const warningMessage = constants.LOG_UNSUPPORTED_EFFECT`${effect}`;
+    logger.log('warn', warningMessage);
+    logger.log('warn', constants.LOG_FULL_MESSAGE_RECEIVED`${message}`);
     session.send(warningMessage);
     session.endDialog();
   }
@@ -129,7 +136,7 @@ function triggerLightEffect(session, effect) {
   pulseOptions.cycles = cycles;
 
   if (pulseOptions.power_on) {
-    captains.log('Initiating the effect');
+    logger.log('info', 'Initiating the effect');
     client
       .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
       .then(result => {
@@ -137,18 +144,22 @@ function triggerLightEffect(session, effect) {
         session.endDialog();
       })
       .catch(error => {
-        captains.error(error);
+        logger.log('error', error);
         session.send(`There was an error initiating the effect: ${error}`);
         session.endDialog();
       });
   } else {
-    captains.log('Options was undefined and therefore no effect was initiated');
+    logger.log(
+      'info',
+      'Options was undefined and therefore no effect was initiated'
+    );
   }
 }
 
 function controlLights(session, location, lightState, color) {
   let message = `The ${location} was turned ${lightState}`;
-  captains.log(color);
+  logger.log('info', color);
+
   const stateToSet = {
     power: `${lightState}`,
     brightness: 1.0,
@@ -169,7 +180,7 @@ function setLifxLights(stateToSet, message, session) {
       session.endDialog();
     })
     .catch(error => {
-      captains.error(error);
+      logger.log('error', error);
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
     });

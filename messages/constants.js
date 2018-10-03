@@ -13,7 +13,7 @@ module.exports = {
   ENTITY_COLOR_NAME: 'color',
   ENTITY_EFFECT_NAME: 'effect',
   ENTITY_STATE_NAME: 'state',
-  MESSAGE_COMMAND_NOT_UNDERSTOOD:
+  MESSAGE_LIGHT_COMMAND_NOT_UNDERSTOOD:
     'I did not understand that light command. Please double check the available commands and retry.',
   PULSE_EFFECT_OPTIONS_COP_MODE: {
     color: 'blue',
@@ -29,5 +29,35 @@ module.exports = {
     color: 'green',
     from_color: 'purple',
     power_on: true
-  }
+  },
+  EFFECT_COP_MODE: 'cop mode',
+  EFFECT_NEW_FOLLOWER: 'new follower',
+  EFFECT_NEW_SUBSCRIBER: 'new subscriber',
+  LOG_FULL_MESSAGE_RECEIVED: logFullMessageReceivedTag,
+  LOG_UNSUPPORTED_EFFECT: logUnsupportedEffect,
+
+
+
+
+
+  LOG_EFFECT_TRIGGERED: logEffectTriggered
 };
+
+function logEffectTriggered(effect) {
+  return `The effect triggered was: ${effect}`;
+}
+
+
+
+
+
+
+
+
+function logFullMessageReceivedTag(message) {
+  return `Full message received: ${message}`;
+}
+
+function logUnsupportedEffect(effect) {
+  return `Received an unsupported effect: ${effect}`;
+}

@@ -8,15 +8,15 @@
     "botbuilder": "^3.13.1",
     "botbuilder-azure": "^3.0.4",
     "dotenv": "~5.0.0",
+    "lifx-http-api": "^1.0.3"
+  },
+  "devDependencies": {
+    "restify": "^5.0.0",
     "eslint": "^5.6.0",
     "eslint-config-airbnb": "^17.1.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^3.0.1",
-    "eslint-plugin-import": "^2.14.0",
-    "lifx-http-api": "^1.0.3"
-  },
-  "devDependencies": {
-    "restify": "^5.0.0"
+    "eslint-plugin-import": "^2.14.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
