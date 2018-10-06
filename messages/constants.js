@@ -44,9 +44,21 @@ module.exports = {
     UNSUPPORTED_EFFECT: logUnsupportedEffect,
     EFFECT_TRIGGERED: logEffectTriggered,
     MESSAGE_NOT_UNDERSTOOD: logMessageNotUnderstood,
-    INITIATING_EFFECT: 'Initiating the effect'
+    INITIATING_EFFECT: 'Initiating the effect',
+    RAW_EFFECT_RECEIVED: logRawEffectReceived,
+    INITIATED_EFFECT: logInitiatedEffect,
+    NO_EFFECT_INITIATED:
+      'Options was undefined and therefore no effect was initiated'
   }
 };
+
+function logInitiatedEffect(effect) {
+  return `Successfully initiated the "${effect}" effect`;
+}
+
+function logRawEffectReceived(effect) {
+  return `Raw effect received: ${effect}`;
+}
 
 function logMessageNotUnderstood(messageText) {
   return `Sorry, I did not understand ${messageText}.`;

@@ -113,8 +113,8 @@ function handleLightsIntent(session, args) {
 
 function triggerLightEffect(session, effect) {
   let pulseOptions;
-  logger.log('info', `Raw effect received: ${effect}`);
-  const message = `Successfully initiated the "${effect}" effect`;
+  logger.log('info', constants.logs.RAW_EFFECT_RECEIVED`${effect}`);
+  const message = constants.logs.INITIATED_EFFECT`${effect}`;
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
@@ -149,10 +149,7 @@ function triggerLightEffect(session, effect) {
         session.endDialog();
       });
   } else {
-    logger.log(
-      'info',
-      'Options was undefined and therefore no effect was initiated'
-    );
+    logger.log('info', constants.logs.NO_EFFECT_INITIATED);
   }
 }
 
