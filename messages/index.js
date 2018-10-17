@@ -112,18 +112,19 @@ function handleLightsIntent(session, args) {
 }
 
 function triggerLightEffect(session, effect) {
-  let pulseOptions;
+  let pulseOptions = {};
   logger.log('info', constants.logs.RAW_EFFECT_RECEIVED(effect));
   const message = constants.logs.INITIATED_EFFECT(effect);
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
-  // TODO: ** Update to make the AI determine this **
-  if (effect === constants.effects.COP_MODE) {
+  // TODO: ** Make the AI determine this with "effectType" and "effectColors" **
+  // Example: bulb pulse purple white
+  if (constants.effects.COP_MODE.includes(effect)) {
     pulseOptions = constants.lifxPulseEffectOptions.COP_MODE;
-  } else if (effect === constants.effects.NEW_FOLLOWER) {
+  } else if (constants.effects.NEW_FOLLOWER.includes(effect)) {
     pulseOptions = constants.lifxPulseEffectOptions.NEW_FOLLOWER;
-  } else if (effect === constants.effects.NEW_SUBSCRIBER) {
+  } else if (constants.effects.NEW_SUBSCRIBER.includes(effect)) {
     pulseOptions = constants.lifxPulseEffectOptions.NEW_SUBSCRIBER;
   } else {
     // Not a defined effect so do nothing
