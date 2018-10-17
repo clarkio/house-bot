@@ -1,153 +1,164 @@
 const builder = require('botbuilder');
 require('dotenv').config();
-const botbuilder_azure = require('botbuilder-azure');
-const axios = require('axios');
-const lifx = require('lifx-http-api');
+const botBuilderAzure = require('botbuilder-azure');
+const Lifx = require('lifx-http-api');
 
-const client = new lifx({
-  bearerToken: process.env['LifxApiKey']
-});
-const lifxDeviceToUse = 'label:Bottom Bulb';
-const iftttKey = process.env.iftttKey;
-const hueEnabled = process.env.hueEnabled;
+const constants = require('./constants');
+const logger = require('./log');
 
-const connector = new botbuilder_azure.BotServiceConnector({
-  appId: process.env['MicrosoftAppId'],
-  appPassword: process.env['MicrosoftAppPassword']
-});
-
-const bot = new builder.UniversalBot(connector, {
+const {
+  LifxApiKey,
+  LuisAPIHostName,
+  LuisAppId,
+  LuisAPIKey,
+  MicrosoftAppId,
+  MicrosoftAppPassword
+} = process.env;
+const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?subscription-key=${LuisAPIKey}`;
+const lifxOptions = { bearerToken: LifxApiKey };
+const botServiceOptions = {
+  appId: MicrosoftAppId,
+  appPassword: MicrosoftAppPassword
+};
+const universalBotOptions = {
   storage: new builder.MemoryBotStorage()
-});
+};
 
-let luisModelUrl = `https://${process.env['LuisAPIHostName']}/luis/v2.0/apps/${
-  process.env['LuisAppId']
-}?subscription-key=${process.env['LuisAPIKey']}`;
+const client = new Lifx(lifxOptions);
+const connector = new botBuilderAzure.BotServiceConnector(botServiceOptions);
+const bot = new builder.UniversalBot(connector, universalBotOptions);
 
-// Main dialog with LUIS
+// Main dialogs with LUIS
 const recognizer = new builder.LuisRecognizer(luisModelUrl);
 const intents = new builder.IntentDialog({ recognizers: [recognizer] })
-  .matches('Greeting', session => {
-    session.send('Sup, yo!');
-  })
-  .matches('Thank You', session => {
-    session.send('No problem! Glad I could help.');
-  })
-  .matches('Help', session => {
-    session.send('I can control the lights in your house. You can say things like, "Turn the kitchen lights on".');
-  })
-  .matches('Cancel', session => {
-    session.send('OK. Canceled.');
-    session.endDialog();
-  })
-  .matches('Lights', (session, args) => {
-    session.send('OK! One sec...');
-
-    let lightState;
-    let location = builder.EntityRecognizer.findEntity(args.entities, 'light');
-    let color = builder.EntityRecognizer.findEntity(args.entities, 'color');
-    let effect = builder.EntityRecognizer.findEntity(args.entities, 'effect');
-
-    if (!color) {
-      lightState = builder.EntityRecognizer.findEntity(args.entities, 'state');
-    } else {
-      lightState = {
-        entity: 'on',
-        type: 'state',
-        startIndex: 0,
-        endIndex: 1,
-        score: 100
-      };
-      if (!location) {
-        location = {
-          entity: 'light'
-        };
-      }
-    }
-
-    if (location && lightState) {
-      // we call LIFX
-      // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
-      controlLights(session, location.entity, lightState.entity, color && color.entity.replace(' ', ''));
-    } else if (effect) {
-      triggerLightEffect(session, effect.entity);
-    } else {
-      session.send(`I did not understand that light command. Please double check the available commands and retry.`);
-      session.endDialog();
-    }
-  })
-  .onDefault(session => {
-    session.send("Sorry, I did not understand '%s'.", session.message.text);
-    session.endDialog();
-  });
+  .matches(constants.intents.GREETING, handleGreetingIntent)
+  .matches(constants.intents.HELP, handleHelpIntent)
+  .matches(constants.intents.CANCEL, handleCancelIntent)
+  .matches(constants.intents.LIGHTS, handleLightsIntent)
+  .onDefault(handleDefaultIntent);
 
 bot.dialog('/', intents);
 
-function triggerLightEffect(session, effect) {
-  let pulseOptions = undefined;
-  console.log(`Raw effect received: ${effect}`);
-  let message = `Successfully initated "${effect}" effect`;
-  let period = parseFloat(process.env.LifxEffectPeriod);
-  let cycles = parseFloat(process.env.LifxEffectCycles);
+function handleGreetingIntent(session) {
+  session.send(constants.messages.GREETING);
+}
 
-  if (effect === 'cop mode') {
-    pulseOptions = {
-      color: 'blue',
-      from_color: 'red',
-      period: period,
-      cycles: cycles,
-      power_on: true
+function handleHelpIntent(session) {
+  session.send(constants.messages.HELP);
+}
+
+function handleCancelIntent(session) {
+  session.send(constants.messages.CANCEL);
+  session.endDialog();
+}
+
+function handleDefaultIntent(session) {
+  session.send(constants.logs.messages.NOT_UNDERSTOOD(session.message.text));
+  session.endDialog();
+}
+
+function handleLightsIntent(session, args) {
+  session.send(constants.messages.LIGHTS_ACKNOWLEDGE);
+
+  let lightState;
+  let location = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.entities.LIGHT_NAME
+  );
+  const color = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.entities.COLOR_NAME
+  );
+  const effect = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.entities.EFFECT_NAME
+  );
+
+  if (!color) {
+    lightState = builder.EntityRecognizer.findEntity(
+      args.entities,
+      constants.entities.STATE_NAME
+    );
+  } else {
+    lightState = {
+      entity: 'on',
+      type: 'state',
+      startIndex: 0,
+      endIndex: 1,
+      score: 100
     };
-  } else if (effect === 'new follower') {
-    pulseOptions = {
-      color: 'purple',
-      from_color: 'white',
-      period: period,
-      cycles: cycles,
-      power_on: true
-    };
-  } else if (effect === 'new subscriber') {
-    pulseOptions = {
-      color: 'green',
-      from_color: 'purple',
-      period: period,
-      cycles: cycles,
-      power_on: true
-    };
+    if (!location) {
+      location = {
+        entity: 'light'
+      };
+    }
+  }
+
+  if (location && lightState) {
+    // we call LIFX
+    // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
+    controlLights(
+      session,
+      location.entity,
+      lightState.entity,
+      color && color.entity.replace(' ', '')
+    );
+  } else if (effect) {
+    triggerLightEffect(session, effect.entity);
+  } else {
+    session.send(constants.messages.LIGHT_COMMAND_NOT_UNDERSTOOD);
+    session.endDialog();
+  }
+}
+
+function triggerLightEffect(session, effect) {
+  let pulseOptions;
+  logger.log('info', constants.logs.RAW_EFFECT_RECEIVED(effect));
+  const message = constants.logs.INITIATED_EFFECT(effect);
+  const period = parseFloat(process.env.LifxEffectPeriod);
+  const cycles = parseFloat(process.env.LifxEffectCycles);
+
+  // TODO: ** Update to make the AI determine this **
+  if (effect === constants.effects.COP_MODE) {
+    pulseOptions = constants.lifxPulseEffectOptions.COP_MODE;
+  } else if (effect === constants.effects.NEW_FOLLOWER) {
+    pulseOptions = constants.lifxPulseEffectOptions.NEW_FOLLOWER;
+  } else if (effect === constants.effects.NEW_SUBSCRIBER) {
+    pulseOptions = constants.lifxPulseEffectOptions.NEW_SUBSCRIBER;
   } else {
     // Not a defined effect so do nothing
-    let warningMessage = `Received an unsupported effect: ${effect}`;
-    console.warn(warningMessage);
-    console.warn(`Full message received: ${message}`);
-
+    const warningMessage = constants.logs.UNSUPPORTED_EFFECT(effect);
+    logger.log('warn', warningMessage);
+    logger.log('warn', constants.logs.FULL_MESSAGE_RECEIVED(message));
     session.send(warningMessage);
     session.endDialog();
   }
+  pulseOptions.period = period;
+  pulseOptions.cycles = cycles;
 
-  if (pulseOptions) {
-    console.log('Initiating the effect');
+  if (pulseOptions.power_on) {
+    logger.log('info', constants.logs.INITIATING_EFFECT);
     client
-      .pulse(lifxDeviceToUse, pulseOptions)
+      .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
       .then(result => {
-        session.send(message);
+        session.send(result);
         session.endDialog();
       })
       .catch(error => {
-        console.error(error);
+        logger.log('error', error);
         session.send(`There was an error initiating the effect: ${error}`);
         session.endDialog();
       });
-
-    // setEffectOnHueLights(pulseOptions);
   } else {
-    console.log('Options was undefined and therefore no effect was initiated');
+    logger.log('info', constants.logs.NO_EFFECT_INITIATED);
   }
 }
 
 function controlLights(session, location, lightState, color) {
   let message = `The ${location} was turned ${lightState}`;
-  console.log(color);
-  let stateToSet = {
+  logger.log('info', color);
+
+  const stateToSet = {
     power: `${lightState}`,
     brightness: 1.0,
     duration: 1
@@ -155,68 +166,22 @@ function controlLights(session, location, lightState, color) {
   if (color) {
     stateToSet.color = `${color}`;
     message += ` and was set to ${color}`;
-    // setHueLights(color);
   }
   setLifxLights(stateToSet, message, session);
 }
 
 function setLifxLights(stateToSet, message, session) {
   client
-    .setState('label:Bottom Bulb', stateToSet)
+    .setState(constants.LIFX_DEVICE_TO_USE, stateToSet)
     .then(result => {
-      session.send(message);
+      session.send(result);
       session.endDialog();
     })
     .catch(error => {
-      console.error(error);
+      logger.log('error', error);
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
     });
-}
-
-function setHueLights(color) {
-  if (!hueEnabled) return;
-  const colorUrl = `https://maker.ifttt.com/trigger/office-color/with/key/${iftttKey}`;
-  const dimUrl = `https://maker.ifttt.com/trigger/office-dim/with/key/${iftttKey}`;
-  const dimPayload = { value1: 100 };
-  const colorPayload = { value1: color };
-  sendHueCommand(colorUrl, colorPayload, dimUrl, dimPayload);
-}
-
-function sendHueCommand(colorUrl, colorPayload, dimUrl, dimPayload) {
-  axios
-    .post(colorUrl, colorPayload)
-    .then(colorResult => {
-      axios
-        .post(dimUrl, dimPayload)
-        .then(dimResult => {
-          console.log('Finished setting Hue lights via IFTTT');
-        })
-        .catch(error => {
-          console.error(`Failed to set DIM level on Hue lights: ${error}`);
-        });
-    })
-    .catch(error => {
-      console.error(`Failed to set COLOR on Hue lights: ${error}`);
-    });
-}
-
-function setEffectOnHueLights(pulseOptions) {
-  if (!hueEnabled) return;
-  for (var i = 0; i < pulseOptions.cycles; i++) {
-    let color = (i + 1) % 2 === 0 ? pulseOptions.from_color : pulseOptions.color;
-    setHueLights(color);
-    sleep(pulseOptions.period * 1000);
-  }
-}
-
-function sleep(milliseconds) {
-  var start = new Date().getTime();
-  for (var i = 0; i < 1e7; i++) {
-    if (new Date().getTime() - start > milliseconds) {
-      break;
-    }
-  }
 }
 
 module.exports = connector.listen();
