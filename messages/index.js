@@ -118,6 +118,7 @@ function triggerLightEffect(session, effect) {
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
+  // TODO: ** Update to make the AI determine this **
   if (effect === constants.effects.COP_MODE) {
     pulseOptions = constants.lifxPulseEffectOptions.COP_MODE;
   } else if (effect === constants.effects.NEW_FOLLOWER) {
