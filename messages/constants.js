@@ -21,24 +21,28 @@ module.exports = {
     EFFECT_NAME: 'effect',
     STATE_NAME: 'state'
   },
-  PULSE_EFFECT_OPTIONS_COP_MODE: {
-    color: 'blue',
-    from_color: 'red',
-    power_on: true
+  lifxPulseEffectOptions: {
+    COP_MODE: {
+      color: 'blue',
+      from_color: 'red',
+      power_on: true
+    },
+    NEW_FOLLOWER: {
+      color: 'purple',
+      from_color: 'white',
+      power_on: true
+    },
+    NEW_SUBSCRIBER: {
+      color: 'green',
+      from_color: 'purple',
+      power_on: true
+    }
   },
-  PULSE_EFFECT_OPTIONS_NEW_FOLLOWER: {
-    color: 'purple',
-    from_color: 'white',
-    power_on: true
+  effects: {
+    COP_MODE: 'cop mode',
+    NEW_FOLLOWER: 'new follower',
+    NEW_SUBSCRIBER: 'new subscriber'
   },
-  PULSE_EFFECT_OPTIONS_NEW_SUBSCRIBER: {
-    color: 'green',
-    from_color: 'purple',
-    power_on: true
-  },
-  EFFECT_COP_MODE: 'cop mode',
-  EFFECT_NEW_FOLLOWER: 'new follower',
-  EFFECT_NEW_SUBSCRIBER: 'new subscriber',
   logs: {
     FULL_MESSAGE_RECEIVED: logFullMessageReceivedTag,
     UNSUPPORTED_EFFECT: logUnsupportedEffect,

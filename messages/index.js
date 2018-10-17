@@ -53,7 +53,7 @@ function handleCancelIntent(session) {
 }
 
 function handleDefaultIntent(session) {
-  session.send(constants.logs.messages.NOT_UNDERSTOOD`${session.message.text}`);
+  session.send(constants.logs.messages.NOT_UNDERSTOOD(session.message.text));
   session.endDialog();
 }
 
@@ -113,22 +113,22 @@ function handleLightsIntent(session, args) {
 
 function triggerLightEffect(session, effect) {
   let pulseOptions;
-  logger.log('info', constants.logs.RAW_EFFECT_RECEIVED`${effect}`);
-  const message = constants.logs.INITIATED_EFFECT`${effect}`;
+  logger.log('info', constants.logs.RAW_EFFECT_RECEIVED(effect));
+  const message = constants.logs.INITIATED_EFFECT(effect);
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
 
-  if (effect === constants.EFFECT_COP_MODE) {
-    pulseOptions = constants.PULSE_EFFECT_OPTIONS_COP_MODE;
-  } else if (effect === constants.EFFECT_NEW_FOLLOWER) {
-    pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_FOLLOWER;
-  } else if (effect === constants.EFFECT_NEW_SUBSCRIBER) {
-    pulseOptions = constants.PULSE_EFFECT_OPTIONS_NEW_SUBSCRIBER;
+  if (effect === constants.effects.COP_MODE) {
+    pulseOptions = constants.lifxPulseEffectOptions.COP_MODE;
+  } else if (effect === constants.effects.NEW_FOLLOWER) {
+    pulseOptions = constants.lifxPulseEffectOptions.NEW_FOLLOWER;
+  } else if (effect === constants.effects.NEW_SUBSCRIBER) {
+    pulseOptions = constants.lifxPulseEffectOptions.NEW_SUBSCRIBER;
   } else {
     // Not a defined effect so do nothing
-    const warningMessage = constants.logs.UNSUPPORTED_EFFECT`${effect}`;
+    const warningMessage = constants.logs.UNSUPPORTED_EFFECT(effect);
     logger.log('warn', warningMessage);
-    logger.log('warn', constants.logs.FULL_MESSAGE_RECEIVED`${message}`);
+    logger.log('warn', constants.logs.FULL_MESSAGE_RECEIVED(message));
     session.send(warningMessage);
     session.endDialog();
   }
