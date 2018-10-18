@@ -16,10 +16,12 @@ module.exports = {
       'I did not understand that light command. Please double check the available commands and retry.'
   },
   entities: {
-    LIGHT_NAME: 'light',
-    COLOR_NAME: 'color',
-    EFFECT_NAME: 'effect',
-    STATE_NAME: 'state'
+    LIGHT_KEY: 'light',
+    COLOR_KEY: 'color',
+    COLOR_REGEX_KEY: 'colorRegex',
+    EFFECT_TYPE_KEY: 'effectType',
+    EFFECT_NAME_KEY: 'effectName',
+    STATE_KEY: 'state'
   },
   lifxPulseEffectOptions: {
     COP_MODE: {
