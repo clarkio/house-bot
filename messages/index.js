@@ -63,21 +63,24 @@ function handleLightsIntent(session, args) {
   let lightState;
   let location = builder.EntityRecognizer.findEntity(
     args.entities,
-    constants.entities.LIGHT_NAME
+    constants.entities.LIGHT_KEY
   );
   const color = builder.EntityRecognizer.findEntity(
     args.entities,
-    constants.entities.COLOR_NAME
+    constants.entities.COLOR_KEY
   );
-  const effect = builder.EntityRecognizer.findEntity(
+  const colorEntities = args.entities.filter(
+    entity => entity.type === constants.entities.COLOR_KEY
+  );
+  const effectType = builder.EntityRecognizer.findEntity(
     args.entities,
-    constants.entities.EFFECT_NAME
+    constants.entities.EFFECT_TYPE_KEY
   );
 
-  if (!color) {
+  if (!color || colorEntities.length === 0) {
     lightState = builder.EntityRecognizer.findEntity(
       args.entities,
-      constants.entities.STATE_NAME
+      constants.entities.STATE_KEY
     );
   } else {
     lightState = {
@@ -94,38 +97,31 @@ function handleLightsIntent(session, args) {
     }
   }
 
-  if (location && lightState) {
+  if (location && lightState && colorEntities.length < 2) {
     // we call LIFX
-    // color.entity.replace is to try and handle hex color codes since LUIS separate #, numbers
-    controlLights(
-      session,
-      location.entity,
-      lightState.entity,
-      color && color.entity.replace(' ', '')
-    );
-  } else if (effect) {
-    triggerLightEffect(session, effect.entity);
+    controlLights(session, location.entity, lightState.entity, color.entity);
+  } else if (effectType) {
+    triggerLightEffect(session, effectType.entity, colorEntities);
   } else {
     session.send(constants.messages.LIGHT_COMMAND_NOT_UNDERSTOOD);
     session.endDialog();
   }
 }
 
-function triggerLightEffect(session, effect) {
+function triggerLightEffect(session, effect, colorEntities) {
   let pulseOptions = {};
   logger.log('info', constants.logs.RAW_EFFECT_RECEIVED(effect));
   const message = constants.logs.INITIATED_EFFECT(effect);
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
-
-  // TODO: ** Make the AI determine this with "effectType" and "effectColors" **
-  // Example: bulb pulse purple white
-  if (constants.effects.COP_MODE.includes(effect)) {
-    pulseOptions = constants.lifxPulseEffectOptions.COP_MODE;
-  } else if (constants.effects.NEW_FOLLOWER.includes(effect)) {
-    pulseOptions = constants.lifxPulseEffectOptions.NEW_FOLLOWER;
-  } else if (constants.effects.NEW_SUBSCRIBER.includes(effect)) {
-    pulseOptions = constants.lifxPulseEffectOptions.NEW_SUBSCRIBER;
+  if (colorEntities.length > 1) {
+    pulseOptions = {
+      color: colorEntities[1].entity,
+      from_color: colorEntities[0].entity,
+      power_on: true,
+      period,
+      cycles
+    };
   } else {
     // Not a defined effect so do nothing
     const warningMessage = constants.logs.UNSUPPORTED_EFFECT(effect);
@@ -134,8 +130,6 @@ function triggerLightEffect(session, effect) {
     session.send(warningMessage);
     session.endDialog();
   }
-  pulseOptions.period = period;
-  pulseOptions.cycles = cycles;
 
   if (pulseOptions.power_on) {
     logger.log('info', constants.logs.INITIATING_EFFECT);
@@ -143,6 +137,9 @@ function triggerLightEffect(session, effect) {
       .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
       .then(result => {
         session.send(result);
+        session.send(
+          `Successfully triggered the special effect to the LIFX light`
+        );
         session.endDialog();
       })
       .catch(error => {
@@ -176,6 +173,7 @@ function setLifxLights(stateToSet, message, session) {
     .setState(constants.LIFX_DEVICE_TO_USE, stateToSet)
     .then(result => {
       session.send(result);
+      session.send(message);
       session.endDialog();
     })
     .catch(error => {
