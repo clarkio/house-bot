@@ -5,8 +5,8 @@
   "main": "messages/index.js",
   "dependencies": {
     "axios": "^0.18.0",
-    "botbuilder": "^3.13.1",
-    "botbuilder-azure": "^3.0.4",
+    "botbuilder": "^4.0.8",
+    "botbuilder-azure": "^4.0.8",
     "dotenv": "~5.0.0",
     "lifx-http-api": "^1.0.3"
   },

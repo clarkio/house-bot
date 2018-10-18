@@ -21,7 +21,7 @@ const botServiceOptions = {
   appPassword: MicrosoftAppPassword
 };
 const universalBotOptions = {
-  storage: new builder.MemoryBotStorage()
+  storage: new builder.MemoryStorage()
 };
 
 const client = new Lifx(lifxOptions);
