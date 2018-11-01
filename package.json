@@ -8,7 +8,7 @@
     "botbuilder": "^3.13.1",
     "botbuilder-azure": "^3.0.4",
     "dotenv": "~5.0.0",
-    "lifx-http-api": "^1.0.3"
+    "lifx-http-api": "git+https://github.com/clarkio/lifx-http-api.git"
   },
   "devDependencies": {
     "restify": "^5.0.0",

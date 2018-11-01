@@ -20,6 +20,7 @@ module.exports = {
     COLOR_KEY: 'color',
     COLOR_REGEX_KEY: 'colorRegex',
     EFFECT_TYPE_KEY: 'effectType',
+    EFFECT_STATE_KEY: 'effectState',
     EFFECT_NAME_KEY: 'effectName',
     STATE_KEY: 'state'
   },
@@ -40,17 +41,29 @@ module.exports = {
       power_on: true
     }
   },
+  lifxCycleEffectDefaults: {
+    power: 'on',
+    duration: 5,
+    hue: 60,
+    saturation: 1
+  },
   effects: {
     COP_MODE: 'cop mode',
     NEW_FOLLOWER: 'new follower',
     NEW_SUBSCRIBER: 'new subscriber'
+  },
+  effectTypes: {
+    PULSE: 'pulse',
+    CYCLE: 'cycle'
   },
   logs: {
     FULL_MESSAGE_RECEIVED: logFullMessageReceivedTag,
     UNSUPPORTED_EFFECT: logUnsupportedEffect,
     EFFECT_TRIGGERED: logEffectTriggered,
     MESSAGE_NOT_UNDERSTOOD: logMessageNotUnderstood,
-    INITIATING_EFFECT: 'Initiating the effect',
+    INITIATING_EFFECT: 'Initiating the effect...',
+    INITIATING_PULSE_EFFECT: 'Initiating a pulse effect...',
+    INITIATING_CYCLE_EFFECT: 'Initiating a cycle effect...',
     RAW_EFFECT_RECEIVED: logRawEffectReceived,
     INITIATED_EFFECT: logInitiatedEffect,
     NO_EFFECT_INITIATED:
