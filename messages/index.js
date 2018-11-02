@@ -269,6 +269,7 @@ function setLifxLights(stateToSet, message, session, restartLightCycle) {
       session.send(message);
       session.endDialog();
 
+      // TODO: make the timeout time value more dynamic
       setTimeout(() => {
         if (restartLightCycle) {
           toggleCycleEffect(session);
@@ -280,6 +281,7 @@ function setLifxLights(stateToSet, message, session, restartLightCycle) {
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
 
+      // TODO: make the timeout time value more dynamic
       setTimeout(() => {
         if (restartLightCycle) {
           toggleCycleEffect(session);
