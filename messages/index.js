@@ -14,6 +14,7 @@ const {
   MicrosoftAppId,
   MicrosoftAppPassword
 } = process.env;
+let isCycleEffectEnabled = false;
 const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?subscription-key=${LuisAPIKey}`;
 const lifxOptions = { bearerToken: LifxApiKey };
 const botServiceOptions = {
@@ -76,6 +77,10 @@ function handleLightsIntent(session, args) {
     args.entities,
     constants.entities.EFFECT_TYPE_KEY
   );
+  const effectState = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.entities.EFFECT_STATE_KEY
+  );
 
   if (!color || colorEntities.length === 0) {
     lightState = builder.EntityRecognizer.findEntity(
@@ -101,54 +106,110 @@ function handleLightsIntent(session, args) {
     // we call LIFX
     controlLights(session, location.entity, lightState.entity, color.entity);
   } else if (effectType) {
-    triggerLightEffect(session, effectType.entity, colorEntities);
+    triggerLightEffect(
+      session,
+      effectType.entity,
+      colorEntities,
+      effectState && effectState.entity
+    );
   } else {
     session.send(constants.messages.LIGHT_COMMAND_NOT_UNDERSTOOD);
     session.endDialog();
   }
 }
 
-function triggerLightEffect(session, effect, colorEntities) {
-  let pulseOptions = {};
+function triggerLightEffect(session, effect, colorEntities, effectState) {
   logger.log('info', constants.logs.RAW_EFFECT_RECEIVED(effect));
   const message = constants.logs.INITIATED_EFFECT(effect);
   const period = parseFloat(process.env.LifxEffectPeriod);
   const cycles = parseFloat(process.env.LifxEffectCycles);
-  if (colorEntities.length > 1) {
-    pulseOptions = {
+  if (effect === constants.effectTypes.PULSE && colorEntities.length > 1) {
+    const pulseOptions = {
       color: colorEntities[1].entity,
       from_color: colorEntities[0].entity,
       power_on: true,
       period,
       cycles
     };
+    initiatePulseEffect(pulseOptions, session);
+  } else if (effect === constants.effectTypes.CYCLE) {
+    toggleCycleEffect(session, effectState);
   } else {
     // Not a defined effect so do nothing
     const warningMessage = constants.logs.UNSUPPORTED_EFFECT(effect);
     logger.log('warn', warningMessage);
     logger.log('warn', constants.logs.FULL_MESSAGE_RECEIVED(message));
+    logger.log('info', constants.logs.NO_EFFECT_INITIATED);
     session.send(warningMessage);
     session.endDialog();
   }
+}
 
-  if (pulseOptions.power_on) {
-    logger.log('info', constants.logs.INITIATING_EFFECT);
-    client
-      .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
-      .then(result => {
-        session.send(result);
-        session.send(
-          `Successfully triggered the special effect to the LIFX light`
-        );
-        session.endDialog();
-      })
-      .catch(error => {
-        logger.log('error', error);
-        session.send(`There was an error initiating the effect: ${error}`);
-        session.endDialog();
-      });
+function initiatePulseEffect(pulseOptions, session) {
+  logger.log('info', constants.logs.INITIATING_PULSE_EFFECT);
+  client
+    .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
+    .then(result => {
+      session.send(result);
+      session.send(
+        `Successfully triggered the special effect on the LIFX light`
+      );
+      session.endDialog();
+    })
+    .catch(error => {
+      logger.log('error', error);
+      session.send(`There was an error initiating the effect: ${error}`);
+      session.endDialog();
+    });
+}
+
+function toggleCycleEffect(session, effectState) {
+  isCycleEffectEnabled = determineEffectState(effectState);
+  if (isCycleEffectEnabled) {
+    logger.log('info', constants.logs.INITIATING_CYCLE_EFFECT);
+    session.send(constants.logs.INITIATING_CYCLE_EFFECT);
+    setLifxLights(
+      { power: 'on', color: 'blue' },
+      'Start of color cycle: blue',
+      session
+    );
+    const cycleEffectInterval = setInterval(() => {
+      if (!isCycleEffectEnabled) {
+        clearInterval(cycleEffectInterval);
+        session.send('Cycle effect has stopped running');
+      } else {
+        cycleLightColor(session);
+      }
+    }, 6000);
   } else {
-    logger.log('info', constants.logs.NO_EFFECT_INITIATED);
+    session.send('Cycle effect is disabled');
+  }
+}
+
+function cycleLightColor(session) {
+  client
+    .setDelta(constants.LIFX_DEVICE_TO_USE, constants.lifxCycleEffectDefaults)
+    .then(result => {
+      logger.log('info', result);
+      session.send('Rotated the light color by 60 degrees');
+    })
+    .catch(error => {
+      logger.log('error', error);
+      session.send(`There was an error initiating the effect: ${error}`);
+      session.endDialog();
+    });
+}
+
+function determineEffectState(effectState) {
+  switch (effectState) {
+    case 'off':
+    case 'disable':
+    case 'stop':
+    case 'end':
+    case 'disabled':
+      return false;
+    default:
+      return true;
   }
 }
 
@@ -158,8 +219,7 @@ function controlLights(session, location, lightState, color) {
 
   const stateToSet = {
     power: `${lightState}`,
-    brightness: 1.0,
-    duration: 1
+    duration: 20
   };
   if (color) {
     stateToSet.color = `${color}`;
