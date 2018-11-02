@@ -168,6 +168,11 @@ function toggleCycleEffect(session, effectState) {
   if (isCycleEffectEnabled) {
     logger.log('info', constants.logs.INITIATING_CYCLE_EFFECT);
     session.send(constants.logs.INITIATING_CYCLE_EFFECT);
+    setLifxLights(
+      { power: 'on', color: 'blue' },
+      'Start of color cycle: blue',
+      session
+    );
     const cycleEffectInterval = setInterval(() => {
       if (!isCycleEffectEnabled) {
         clearInterval(cycleEffectInterval);
