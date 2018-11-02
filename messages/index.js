@@ -15,6 +15,7 @@ const {
   MicrosoftAppPassword
 } = process.env;
 let isCycleEffectEnabled = false;
+let isCycleEffectRunning = false;
 const luisModelUrl = `https://${LuisAPIHostName}/luis/v2.0/apps/${LuisAppId}?subscription-key=${LuisAPIKey}`;
 const lifxOptions = { bearerToken: LifxApiKey };
 const botServiceOptions = {
@@ -165,7 +166,7 @@ function initiatePulseEffect(pulseOptions, session) {
 
 function toggleCycleEffect(session, effectState) {
   isCycleEffectEnabled = determineEffectState(effectState);
-  if (isCycleEffectEnabled) {
+  if (isCycleEffectEnabled && !isCycleEffectRunning) {
     logger.log('info', constants.logs.INITIATING_CYCLE_EFFECT);
     session.send(constants.logs.INITIATING_CYCLE_EFFECT);
     setLifxLights(
@@ -173,9 +174,11 @@ function toggleCycleEffect(session, effectState) {
       'Start of color cycle: blue',
       session
     );
+    isCycleEffectRunning = true;
     const cycleEffectInterval = setInterval(() => {
       if (!isCycleEffectEnabled) {
         clearInterval(cycleEffectInterval);
+        isCycleEffectRunning = false;
         session.send('Cycle effect has stopped running');
       } else {
         cycleLightColor(session);
