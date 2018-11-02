@@ -132,7 +132,8 @@ function triggerLightEffect(session, effect, colorEntities, effectState) {
       period,
       cycles
     };
-    initiatePulseEffect(pulseOptions, session);
+    const restartLightCycle = shouldRestartLightCycle();
+    initiatePulseEffect(pulseOptions, session, restartLightCycle);
   } else if (effect === constants.effectTypes.CYCLE) {
     toggleCycleEffect(session, effectState);
   } else {
@@ -146,7 +147,7 @@ function triggerLightEffect(session, effect, colorEntities, effectState) {
   }
 }
 
-function initiatePulseEffect(pulseOptions, session) {
+function initiatePulseEffect(pulseOptions, session, restartLightCycle) {
   logger.log('info', constants.logs.INITIATING_PULSE_EFFECT);
   client
     .pulse(constants.LIFX_DEVICE_TO_USE, pulseOptions)
@@ -156,11 +157,19 @@ function initiatePulseEffect(pulseOptions, session) {
         `Successfully triggered the special effect on the LIFX light`
       );
       session.endDialog();
+
+      if (restartLightCycle) {
+        toggleCycleEffect(session);
+      }
     })
     .catch(error => {
       logger.log('error', error);
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
+
+      if (restartLightCycle) {
+        toggleCycleEffect(session);
+      }
     });
 }
 
@@ -228,21 +237,40 @@ function controlLights(session, location, lightState, color) {
     stateToSet.color = `${color}`;
     message += ` and was set to ${color}`;
   }
-  setLifxLights(stateToSet, message, session);
+  const restartLightCycle = shouldRestartLightCycle();
+  setLifxLights(stateToSet, message, session, restartLightCycle);
 }
 
-function setLifxLights(stateToSet, message, session) {
+function shouldRestartLightCycle() {
+  let restartLightCycle = false;
+  if (isCycleEffectRunning) {
+    isCycleEffectEnabled = false;
+    isCycleEffectRunning = false;
+    restartLightCycle = true;
+  } else {
+    restartLightCycle = false;
+  }
+  return restartLightCycle;
+}
+
+function setLifxLights(stateToSet, message, session, restartLightCycle) {
   client
     .setState(constants.LIFX_DEVICE_TO_USE, stateToSet)
     .then(result => {
       session.send(result);
       session.send(message);
       session.endDialog();
+      if (restartLightCycle) {
+        toggleCycleEffect(session);
+      }
     })
     .catch(error => {
       logger.log('error', error);
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
+      if (restartLightCycle) {
+        toggleCycleEffect(session);
+      }
     });
 }
 
