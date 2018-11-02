@@ -105,7 +105,12 @@ function handleLightsIntent(session, args) {
 
   if (location && lightState && colorEntities.length < 2) {
     // we call LIFX
-    controlLights(session, location.entity, lightState.entity, color.entity);
+    controlLights(
+      session,
+      location.entity,
+      lightState.entity,
+      color && color.entity
+    );
   } else if (effectType) {
     triggerLightEffect(
       session,
@@ -193,8 +198,11 @@ function toggleCycleEffect(session, effectState) {
         cycleLightColor(session);
       }
     }, 6000);
-  } else {
+  } else if (!isCycleEffectEnabled) {
+    isCycleEffectRunning = false;
     session.send('Cycle effect is disabled');
+  } else {
+    session.send('Cycle effect is already enabled and running');
   }
 }
 
@@ -231,7 +239,7 @@ function controlLights(session, location, lightState, color) {
 
   const stateToSet = {
     power: `${lightState}`,
-    duration: 20
+    duration: 0.5
   };
   if (color) {
     stateToSet.color = `${color}`;
@@ -260,17 +268,23 @@ function setLifxLights(stateToSet, message, session, restartLightCycle) {
       session.send(result);
       session.send(message);
       session.endDialog();
-      if (restartLightCycle) {
-        toggleCycleEffect(session);
-      }
+
+      setTimeout(() => {
+        if (restartLightCycle) {
+          toggleCycleEffect(session);
+        }
+      }, 30000);
     })
     .catch(error => {
       logger.log('error', error);
       session.send(`There was an error initiating the effect: ${error}`);
       session.endDialog();
-      if (restartLightCycle) {
-        toggleCycleEffect(session);
-      }
+
+      setTimeout(() => {
+        if (restartLightCycle) {
+          toggleCycleEffect(session);
+        }
+      }, 30000);
     });
 }
 
