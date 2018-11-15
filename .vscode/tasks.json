@@ -8,7 +8,7 @@
       "command": "func host start",
       "options": {
         "env": {
-          "languageWorkers:node:arguments": "--inspect=5858"
+          "languageWorkers__node__arguments": "--inspect=5858"
         }
       },
       "isBackground": true,
