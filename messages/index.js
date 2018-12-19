@@ -1,11 +1,59 @@
-const builder = require('botbuilder');
+// #region start of v4 upgrade
+// @ts-check
+const path = require('path');
 require('dotenv').config();
-const botBuilderAzure = require('botbuilder-azure');
+// Import required bot services. See https://aka.ms/bot-services to learn more about the different parts of a bot.
+const {
+  BotFrameworkAdapter,
+  ConversationState,
+  MemoryStorage
+} = require('botbuilder');
+// Import required bot configuration.
+const { BotConfiguration } = require('botframework-config');
 const Lifx = require('lifx-http-api');
 
 const constants = require('./constants');
 const logger = require('./log');
 
+// Get the .bot file path
+// See https://aka.ms/about-bot-file to learn more about .bot file its use and bot configuration.
+const BOT_FILE = path.join(__dirname, process.env.botFilePath || '');
+let botConfig;
+try {
+  // Read bot configuration from .bot file.
+  botConfig = BotConfiguration.loadSync(BOT_FILE, process.env.botFileSecret);
+} catch (err) {
+  logger(
+    'error',
+    `\nError reading bot file. Please ensure you have valid botFilePath and botFileSecret set for your environment.`
+  );
+  logger(
+    'error',
+    `\n - The botFileSecret is available under appsettings for your Azure Bot Service bot.`
+  );
+  logger(
+    'error',
+    `\n - If you are running this bot locally, consider adding a .env file with botFilePath and botFileSecret.`
+  );
+  logger(
+    'error',
+    `\n - See https://aka.ms/about-bot-file to learn more about .bot file its use and bot configuration.\n\n`
+  );
+  process.exit();
+}
+
+// For local development configuration as defined in .bot file
+const DEV_ENVIRONMENT = 'development';
+
+// Define name of the endpoint configuration section from the .bot file
+const BOT_CONFIGURATION = process.env.NODE_ENV || DEV_ENVIRONMENT;
+
+// Get bot endpoint configuration by service name
+// Bot configuration as defined in .bot file
+const endpointConfig = botConfig.findServiceByNameOrId(BOT_CONFIGURATION);
+// #endregion
+
+// **** Start of original code before using v3 of botframework ***
 const {
   LifxApiKey,
   LuisAPIHostName,
@@ -23,12 +71,14 @@ const botServiceOptions = {
   appPassword: MicrosoftAppPassword
 };
 const universalBotOptions = {
-  storage: new builder.MemoryBotStorage()
+  storage: new builder.MemoryStorage()
 };
 
 const client = new Lifx(lifxOptions);
 const connector = new botBuilderAzure.BotServiceConnector(botServiceOptions);
-const bot = new builder.UniversalBot(connector, universalBotOptions);
+const bot = new builder.BotFrameworkAdapter(connector, universalBotOptions);
+
+// builder.UniversalBot(connector, universalBotOptions);
 
 // Main dialogs with LUIS
 const recognizer = new builder.LuisRecognizer(luisModelUrl);
