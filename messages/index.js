@@ -1,5 +1,5 @@
-const builder = require('botbuilder');
 require('dotenv').config();
+const builder = require('botbuilder');
 const botBuilderAzure = require('botbuilder-azure');
 const Lifx = require('lifx-http-api');
 
@@ -62,17 +62,21 @@ function handleDefaultIntent(session) {
 function handleLightsIntent(session, args) {
   session.send(constants.messages.LIGHTS_ACKNOWLEDGE);
 
+  const colorHex = builder.EntityRecognizer.findEntity(
+    args.entities,
+    constants.entities.COLOR_HEX
+  );
   let lightState;
   let location = builder.EntityRecognizer.findEntity(
     args.entities,
     constants.entities.LIGHT_KEY
   );
-  const color = builder.EntityRecognizer.findEntity(
+  const colorName = builder.EntityRecognizer.findEntity(
     args.entities,
-    constants.entities.COLOR_KEY
+    constants.entities.COLOR_NAME
   );
   const colorEntities = args.entities.filter(
-    entity => entity.type === constants.entities.COLOR_KEY
+    entity => entity.type === constants.entities.COLOR_NAME
   );
   const effectType = builder.EntityRecognizer.findEntity(
     args.entities,
@@ -83,7 +87,7 @@ function handleLightsIntent(session, args) {
     constants.entities.EFFECT_STATE_KEY
   );
 
-  if (!color || colorEntities.length === 0) {
+  if (!colorName && !colorHex && colorEntities.length === 0) {
     lightState = builder.EntityRecognizer.findEntity(
       args.entities,
       constants.entities.STATE_KEY
@@ -109,7 +113,7 @@ function handleLightsIntent(session, args) {
       session,
       location.entity,
       lightState.entity,
-      color && color.entity
+      (colorName && colorName.entity) || (colorHex && colorHex.entity)
     );
   } else if (effectType) {
     triggerLightEffect(

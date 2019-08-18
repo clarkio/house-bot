@@ -17,7 +17,8 @@ module.exports = {
   },
   entities: {
     LIGHT_KEY: 'light',
-    COLOR_KEY: 'color',
+    COLOR_NAME: 'Color.Name',
+    COLOR_HEX: 'Color.Hex',
     COLOR_REGEX_KEY: 'colorRegex',
     EFFECT_TYPE_KEY: 'effectType',
     EFFECT_STATE_KEY: 'effectState',
