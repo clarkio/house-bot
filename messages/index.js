@@ -2,6 +2,7 @@ require('dotenv').config();
 const builder = require('botbuilder');
 const botBuilderAzure = require('botbuilder-azure');
 const Lifx = require('lifx-http-api');
+const toHex = require('colornames');
 
 const constants = require('./constants');
 const logger = require('./log');
@@ -25,6 +26,7 @@ const botServiceOptions = {
 const universalBotOptions = {
   storage: new builder.MemoryBotStorage()
 };
+const hexColorCodeRegex = new RegExp('^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$');
 
 const client = new Lifx(lifxOptions);
 const connector = new botBuilderAzure.BotServiceConnector(botServiceOptions);
@@ -246,8 +248,11 @@ function controlLights(session, location, lightState, color) {
     duration: 0.5
   };
   if (color) {
-    stateToSet.color = `${color}`;
     message += ` and was set to ${color}`;
+    stateToSet.color = `${color}`;
+    if (!hexColorCodeRegex.test(color)) {
+      stateToSet.color = toHex(color);
+    }
   }
   const restartLightCycle = shouldRestartLightCycle();
   setLifxLights(stateToSet, message, session, restartLightCycle);
