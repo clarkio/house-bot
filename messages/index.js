@@ -111,6 +111,10 @@ function handleLightsIntent(session, args) {
 
   if (location && lightState && colorEntities.length < 2) {
     // we call LIFX
+    session.send(
+      `About to control the light ${(colorName && colorName.entity) ||
+        (colorHex && colorHex.entity)}`
+    );
     controlLights(
       session,
       location.entity,
@@ -250,8 +254,13 @@ function controlLights(session, location, lightState, color) {
   if (color) {
     message += ` and was set to ${color}`;
     stateToSet.color = `${color}`;
+    session.send(`Checking if color, ${color}, is in hex code format`);
     if (!hexColorCodeRegex.test(color)) {
+      session.send(`Converting color, ${color}, to hex code`);
       stateToSet.color = toHex(color);
+      session.send(
+        `DONE converting color, ${color}, to hex code: ${stateToSet.color}`
+      );
     }
   }
   const restartLightCycle = shouldRestartLightCycle();
