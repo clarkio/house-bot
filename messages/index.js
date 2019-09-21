@@ -255,10 +255,16 @@ function controlLights(session, location, lightState, color) {
     message += ` and was set to ${color}`;
     stateToSet.color = `${color}`;
     session.send(`Checking if color, ${color}, is in hex code format`);
+    logger.log('info', `Checking if color, ${color}, is in hex code format`);
     if (!hexColorCodeRegex.test(color)) {
       session.send(`Converting color, ${color}, to hex code`);
+      logger.log('info', `Converting color, ${color}, to hex code`);
       stateToSet.color = toHex(color);
       session.send(
+        `DONE converting color, ${color}, to hex code: ${stateToSet.color}`
+      );
+      logger.log(
+        'info',
         `DONE converting color, ${color}, to hex code: ${stateToSet.color}`
       );
     }
