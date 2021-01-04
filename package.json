@@ -4,7 +4,7 @@
   "description": "",
   "main": "messages/index.js",
   "dependencies": {
-    "axios": "^0.19.0",
+    "axios": "^0.21.1",
     "botbuilder": "^3.16.0",
     "botbuilder-azure": "^3.0.4",
     "colornames": "^1.1.1",
